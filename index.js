@@ -28,14 +28,20 @@ module.exports = {
     const RUNNING_IN_NETLIFY = !IS_LOCAL;
     const IS_PREVIEW = process.env.CONTEXT == 'deploy-preview';
 
+    const environment = process.env.BRANCH === 'prod'
+      ? 'production'
+      : process.env.BRANCH === 'staging'
+        ? 'staging'
+        : ''
+
     /* Set the user input settings */
     const sentryUrl = process.env.SENTRY_URL || inputs.sentryUrl;
     const sentryOrg = process.env.SENTRY_ORG || inputs.sentryOrg;
     const sentryProject = process.env.SENTRY_PROJECT || inputs.sentryProject;
     const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || inputs.sentryAuthToken;
-    const sentryRelease = packageJson.version || process.env.SENTRY_RELEASE || inputs.sentryRelease || process.env.COMMIT_REF;
+    const sentryRelease = process.env.SENTRY_RELEASE || packageJson.version || inputs.sentryRelease || process.env.COMMIT_REF;
     const releasePrefix = process.env.SENTRY_RELEASE_PREFIX || inputs.releasePrefix || 'v';
-    const sentryEnvironment = process.env.SENTRY_ENVIRONMENT || process.env.CONTEXT;
+    const sentryEnvironment = process.env.SENTRY_ENVIRONMENT || environment || process.env.CONTEXT;
     const sentryRepository = process.env.SENTRY_REPOSITORY || inputs.sentryRepository;
     const sourceMapPath = inputs.sourceMapPath || PUBLISH_DIR;
     const sourceMapUrlPrefix = inputs.sourceMapUrlPrefix || DEFAULT_SOURCE_MAP_URL_PREFIX;
