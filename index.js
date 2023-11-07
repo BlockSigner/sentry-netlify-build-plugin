@@ -138,6 +138,7 @@ async function createSentryRelease({
       include: [sourceMapPath],
       urlPrefix: sourceMapUrlPrefix,
       rewrite: true,
+      validate: true,
       ignore: ['node_modules'],
     });
   }
