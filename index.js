@@ -26,29 +26,23 @@ module.exports = {
     const { PUBLISH_DIR, IS_LOCAL } = constants;
 
     const RUNNING_IN_NETLIFY = !IS_LOCAL;
-    const IS_PREVIEW = process.env.CONTEXT == 'deploy-preview';
-
-    const environment = process.env.BRANCH === 'prod'
-      ? 'production'
-      : process.env.BRANCH === 'staging'
-        ? 'staging'
-        : ''
+    const IS_PREVIEW = process.env.CONTEXT === 'deploy-preview';
 
     /* Set the user input settings */
     const sentryUrl = process.env.SENTRY_URL || inputs.sentryUrl;
     const sentryOrg = process.env.SENTRY_ORG || inputs.sentryOrg;
     const sentryProject = process.env.SENTRY_PROJECT || inputs.sentryProject;
     const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || inputs.sentryAuthToken;
-    const sentryRelease = process.env.SENTRY_RELEASE || packageJson.version || inputs.sentryRelease || process.env.COMMIT_REF;
-    const releasePrefix = process.env.SENTRY_RELEASE_PREFIX || inputs.releasePrefix || 'v';
-    const sentryEnvironment = process.env.SENTRY_ENVIRONMENT || environment || process.env.CONTEXT;
+    const sentryRelease = process.env.SENTRY_RELEASE || inputs.sentryRelease || packageJson.version || process.env.COMMIT_REF;
+    const releasePrefix = process.env.SENTRY_RELEASE_PREFIX || inputs.releasePrefix || '';
+    const sentryEnvironment = process.env.SENTRY_ENVIRONMENT || process.env.CONTEXT;
     const sentryRepository = process.env.SENTRY_REPOSITORY || inputs.sentryRepository;
     const sourceMapPath = inputs.sourceMapPath || PUBLISH_DIR;
     const sourceMapUrlPrefix = inputs.sourceMapUrlPrefix || DEFAULT_SOURCE_MAP_URL_PREFIX;
     const shouldDeleteMaps = inputs.deleteSourceMaps || SENTRY_DELETE_SOURCEMAPS;
 
     if (RUNNING_IN_NETLIFY) {
-      if (IS_PREVIEW && !inputs.deployPreviews) {
+      if (IS_PREVIEW) {
         console.log('Skipping Sentry release creation - Deploy Preview');
         return;
       }
@@ -114,7 +108,7 @@ async function createSentryRelease({
   sourceMapUrlPrefix,
 }) {
   // default config file is read from ~/.sentryclirc
-  const { constants, inputs, utils } = pluginApi;
+  const { inputs, utils } = pluginApi;
   const cli = new SentryCli();
 
   console.log('Creating new release with version: ', release);
@@ -144,6 +138,7 @@ async function createSentryRelease({
       include: [sourceMapPath],
       urlPrefix: sourceMapUrlPrefix,
       rewrite: true,
+      validate: true,
       ignore: ['node_modules'],
     });
   }
@@ -165,7 +160,9 @@ async function createSentryRelease({
     }
   }
   // https://docs.sentry.io/cli/releases/#finalizing-releases
-  await cli.releases.finalize(release);
+  if (process.env.CONTEXT === 'production') {
+    await cli.releases.finalize(release);
+  }
 
   // https://docs.sentry.io/cli/releases/#creating-deploys
   await cli.releases.execute(['releases', 'deploys', release, 'new', '-e', sentryEnvironment]);
